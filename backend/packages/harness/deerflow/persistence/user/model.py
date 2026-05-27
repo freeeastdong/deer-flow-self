@@ -47,6 +47,7 @@ class UserRow(Base):
     # Auth lifecycle flags
     needs_setup: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     token_version: Mapped[int] = mapped_column(nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
         Index(

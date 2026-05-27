@@ -100,3 +100,24 @@ class UserRepository(ABC):
             User if found, None otherwise
         """
         raise NotImplementedError
+
+    @abstractmethod
+    async def list_all_users(self) -> list[User]:
+        """Return all users ordered by creation time descending.
+
+        Returns:
+            List of all registered users.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_user(self, user_id: str) -> bool:
+        """Delete user by ID.
+
+        Args:
+            user_id: User UUID as string
+
+        Returns:
+            True if user was deleted, False if user was not found.
+        """
+        raise NotImplementedError

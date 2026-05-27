@@ -1,14 +1,21 @@
 "use client";
 
 import {
+  Activity,
   BugIcon,
   ChevronsUpDown,
   GlobeIcon,
   InfoIcon,
+  LogOut,
   MailIcon,
   Settings2Icon,
   SettingsIcon,
+  Shield,
+  User,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
@@ -25,6 +32,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/core/auth/AuthProvider";
 import { useI18n } from "@/core/i18n/hooks";
 
 import { GithubIcon } from "./github-icon";
@@ -58,6 +66,8 @@ export function WorkspaceNavMenu() {
   const [mounted, setMounted] = useState(false);
   const { open: isSidebarOpen } = useSidebar();
   const { t } = useI18n();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -87,6 +97,17 @@ export function WorkspaceNavMenu() {
                 align="end"
                 sideOffset={4}
               >
+                {user && (
+                  <>
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium">{user.email}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {user.system_role === "admin" ? "管理员" : "普通用户"}
+                      </p>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     onClick={() => {
@@ -97,6 +118,29 @@ export function WorkspaceNavMenu() {
                     <Settings2Icon />
                     {t.common.settings}
                   </DropdownMenuItem>
+                  {user?.system_role === "admin" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <Link href="/admin/dashboard">
+                        <DropdownMenuItem>
+                          <Activity className="mr-2 h-4 w-4" />
+                          Dashboard 概览
+                        </DropdownMenuItem>
+                      </Link>
+                      <Link href="/admin/users">
+                        <DropdownMenuItem>
+                          <Users className="mr-2 h-4 w-4" />
+                          用户管理
+                        </DropdownMenuItem>
+                      </Link>
+                      <Link href="/admin/settings">
+                        <DropdownMenuItem>
+                          <Settings2Icon className="mr-2 h-4 w-4" />
+                          系统设置
+                        </DropdownMenuItem>
+                      </Link>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <a
                     href="https://deerflow.tech/"
@@ -146,6 +190,20 @@ export function WorkspaceNavMenu() {
                   <InfoIcon />
                   {t.workspace.about}
                 </DropdownMenuItem>
+                {user && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await logout();
+                        router.push("/");
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      退出登录
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (

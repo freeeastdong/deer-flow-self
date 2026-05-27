@@ -78,8 +78,27 @@ export function Hero({ className }: { className?: string }) {
           <br />
           different levels of tasks that could take minutes to hours.
         </p>
-        <Link href="/workspace">
-          <Button className="size-lg mt-8 scale-108" size="lg">
+        <Link href="/workspace" className="relative mt-8 inline-block">
+          {/* Ripple rings */}
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full border border-white/30"
+            style={{ animation: "ripple-pulse 2.5s ease-out infinite" }}
+          />
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full border border-white/20"
+            style={{
+              animation: "ripple-pulse 2.5s ease-out infinite",
+              animationDelay: "0.8s",
+            }}
+          />
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full border border-white/10"
+            style={{
+              animation: "ripple-pulse 2.5s ease-out infinite",
+              animationDelay: "1.6s",
+            }}
+          />
+          <Button className="size-lg relative z-10 scale-108" size="lg">
             <span className="text-md">Get Started with 2.0</span>
             <ChevronRightIcon className="size-4" />
           </Button>

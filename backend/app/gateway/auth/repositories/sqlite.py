@@ -46,6 +46,7 @@ class SQLiteUserRepository(UserRepository):
             oauth_id=row.oauth_id,
             needs_setup=row.needs_setup,
             token_version=row.token_version,
+            is_active=row.is_active,
         )
 
     @staticmethod
@@ -60,6 +61,7 @@ class SQLiteUserRepository(UserRepository):
             oauth_id=user.oauth_id,
             needs_setup=user.needs_setup,
             token_version=user.token_version,
+            is_active=user.is_active,
         )
 
     # ── CRUD ──────────────────────────────────────────────────────────
@@ -106,6 +108,7 @@ class SQLiteUserRepository(UserRepository):
             row.oauth_id = user.oauth_id
             row.needs_setup = user.needs_setup
             row.token_version = user.token_version
+            row.is_active = user.is_active
             await session.commit()
         return user
 
@@ -125,3 +128,18 @@ class SQLiteUserRepository(UserRepository):
             result = await session.execute(stmt)
             row = result.scalar_one_or_none()
             return self._row_to_user(row) if row is not None else None
+
+    async def list_all_users(self) -> list[User]:
+        stmt = select(UserRow).order_by(UserRow.created_at.desc())
+        async with self._sf() as session:
+            result = await session.execute(stmt)
+            return [self._row_to_user(row) for row in result.scalars().all()]
+
+    async def delete_user(self, user_id: str) -> bool:
+        async with self._sf() as session:
+            row = await session.get(UserRow, user_id)
+            if row is None:
+                return False
+            await session.delete(row)
+            await session.commit()
+            return True

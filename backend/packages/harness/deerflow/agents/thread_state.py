@@ -14,7 +14,7 @@ class ThreadDataState(TypedDict):
 
 
 class ViewedImageData(TypedDict):
-    base64: str
+    image_path: str
     mime_type: str
 
 

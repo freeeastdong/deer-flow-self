@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+from datetime import UTC, datetime
 from ipaddress import ip_address, ip_network
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -108,6 +109,7 @@ class RegisterRequest(BaseModel):
 
     email: EmailStr
     password: str = Field(..., min_length=8)
+    invite_code: str | None = Field(default=None, description="Required when public registration is disabled")
 
     _strong_password = field_validator("password")(classmethod(lambda cls, v: _validate_strong_password(v)))
 
@@ -308,6 +310,36 @@ async def register(request: Request, response: Response, body: RegisterRequest):
     Admin is auto-created on first boot. This endpoint creates regular users.
     Auto-login by setting the session cookie.
     """
+    from app.gateway.auth.config import get_auth_config
+    from deerflow.persistence.engine import get_session_factory
+    from deerflow.persistence.invite_code.model import InviteCodeRow
+    from sqlalchemy import select
+
+    auth_cfg = get_auth_config()
+
+    # Registration gating
+    if not auth_cfg.allow_public_registration:
+        if not body.invite_code:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=AuthErrorResponse(code=AuthErrorCode.FORBIDDEN, message="Public registration is disabled. Invite code required.").model_dump(),
+            )
+
+    # Validate invite code if provided (or required)
+    if body.invite_code or not auth_cfg.allow_public_registration:
+        sf = get_session_factory()
+        if sf is None:
+            raise HTTPException(status_code=500, detail="Database not available")
+        async with sf() as session:
+            stmt = select(InviteCodeRow).where(InviteCodeRow.code == body.invite_code)
+            result = await session.execute(stmt)
+            code_row = result.scalar_one_or_none()
+            if not code_row or not code_row.is_active or code_row.used_count >= code_row.max_uses:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=AuthErrorResponse(code=AuthErrorCode.INVALID_CREDENTIALS, message="Invalid or expired invite code").model_dump(),
+                )
+
     try:
         user = await get_local_provider().create_user(email=body.email, password=body.password, system_role="user")
     except ValueError:
@@ -315,6 +347,22 @@ async def register(request: Request, response: Response, body: RegisterRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=AuthErrorResponse(code=AuthErrorCode.EMAIL_ALREADY_EXISTS, message="Email already registered").model_dump(),
         )
+
+    # Mark invite code as used
+    if body.invite_code:
+        sf = get_session_factory()
+        if sf is not None:
+            async with sf() as session:
+                stmt = select(InviteCodeRow).where(InviteCodeRow.code == body.invite_code)
+                result = await session.execute(stmt)
+                code_row = result.scalar_one_or_none()
+                if code_row is not None:
+                    code_row.used_count += 1
+                    code_row.used_by = str(user.id)
+                    code_row.used_at = datetime.now(UTC)
+                    if code_row.used_count >= code_row.max_uses:
+                        code_row.is_active = False
+                    await session.commit()
 
     token = create_access_token(str(user.id), token_version=user.token_version)
     _set_session_cookie(response, token, request)

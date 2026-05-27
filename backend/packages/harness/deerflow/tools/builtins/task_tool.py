@@ -166,6 +166,13 @@ async def task_tool(
         available_tools_kwargs["app_config"] = resolved_app_config
     tools = get_available_tools(**available_tools_kwargs)
 
+    # Extract locale from runtime for language consistency
+    locale = None
+    if hasattr(runtime, "context") and isinstance(runtime.context, dict):
+        locale = runtime.context.get("locale")
+    if locale is None and hasattr(runtime, "config"):
+        locale = runtime.config.get("configurable", {}).get("locale")
+
     # Create executor
     executor_kwargs = {
         "config": config,
@@ -175,6 +182,7 @@ async def task_tool(
         "thread_data": thread_data,
         "thread_id": thread_id,
         "trace_id": trace_id,
+        "locale": locale,
     }
     if resolved_app_config is not None:
         executor_kwargs["app_config"] = resolved_app_config

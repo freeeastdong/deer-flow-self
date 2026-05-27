@@ -1,4 +1,3 @@
-import base64
 import mimetypes
 from pathlib import Path
 from typing import Annotated
@@ -132,16 +131,16 @@ def view_image_tool(
             update={"messages": [ToolMessage(f"Error: Image file is too large: {image_size} bytes. Maximum supported size is {_MAX_IMAGE_BYTES} bytes", tool_call_id=tool_call_id)]},
         )
 
-    # Read image file and convert to base64
+    # Read a small chunk to validate file header (avoid loading full image into memory)
     try:
         with open(actual_path, "rb") as f:
-            image_data = f.read()
+            header_data = f.read(32)
     except Exception as e:
         return Command(
             update={"messages": [ToolMessage(f"Error reading image file: {_sanitize_image_error(e, thread_data)}", tool_call_id=tool_call_id)]},
         )
 
-    detected_mime_type = _detect_image_mime(image_data)
+    detected_mime_type = _detect_image_mime(header_data)
     if detected_mime_type is None:
         return Command(
             update={"messages": [ToolMessage("Error: File contents do not match a supported image format", tool_call_id=tool_call_id)]},
@@ -151,11 +150,10 @@ def view_image_tool(
             update={"messages": [ToolMessage(f"Error: Image contents are {detected_mime_type}, but file extension indicates {expected_mime_type}", tool_call_id=tool_call_id)]},
         )
     mime_type = detected_mime_type
-    image_base64 = base64.b64encode(image_data).decode("utf-8")
 
-    # Update viewed_images in state
+    # Update viewed_images in state with image_path instead of base64
     # The merge_viewed_images reducer will handle merging with existing images
-    new_viewed_images = {image_path: {"base64": image_base64, "mime_type": mime_type}}
+    new_viewed_images = {image_path: {"image_path": image_path, "mime_type": mime_type}}
 
     return Command(
         update={"viewed_images": new_viewed_images, "messages": [ToolMessage("Successfully read image", tool_call_id=tool_call_id)]},

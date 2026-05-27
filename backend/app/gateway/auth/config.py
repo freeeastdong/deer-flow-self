@@ -25,6 +25,7 @@ class AuthConfig(BaseModel):
     token_expiry_days: int = Field(default=7, ge=1, le=30)
     oauth_github_client_id: str | None = Field(default=None)
     oauth_github_client_secret: str | None = Field(default=None)
+    allow_public_registration: bool = Field(default=True, description="Whether anyone can register without an invite code")
 
 
 _auth_config: AuthConfig | None = None
@@ -47,7 +48,11 @@ def get_auth_config() -> AuthConfig:
                 "For production, add AUTH_JWT_SECRET to your .env file: "
                 'python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
-        _auth_config = AuthConfig(jwt_secret=jwt_secret)
+        allow_public = os.environ.get("ALLOW_PUBLIC_REGISTRATION", "true").lower() not in ("false", "0", "no", "off")
+        _auth_config = AuthConfig(
+            jwt_secret=jwt_secret,
+            allow_public_registration=allow_public,
+        )
     return _auth_config
 
 

@@ -1,0 +1,67 @@
+[
+  {
+    "track_id": "netease_12345678",
+    "track": "Creep",
+    "artist": "Radiohead",
+    "album": "Pablo Honey",
+    "genre": "Alternative Rock",
+    "play_count": 42,
+    "is_liked": true,
+    "rank": 1,
+    "source": "netease",
+    "timestamp_range": "2024-01~2024-12",
+    "context_tags": ["深夜", "独处"]
+  },
+  {
+    "track_id": "netease_87654321",
+    "track": "First Love",
+    "artist": "宇多田光",
+    "album": "First Love",
+    "genre": "J-Pop",
+    "play_count": 38,
+    "is_liked": true,
+    "rank": 2,
+    "source": "netease",
+    "timestamp_range": "2024-01~2024-12",
+    "context_tags": ["雨天", "怀旧"]
+  },
+  {
+    "track_id": "netease_11223344",
+    "track": "夜曲",
+    "artist": "周杰伦",
+    "album": "十一月的萧邦",
+    "genre": "Mandopop",
+    "play_count": 35,
+    "is_liked": true,
+    "rank": 3,
+    "source": "netease",
+    "timestamp_range": "2024-01~2024-12",
+    "context_tags": ["驾车", "夜晚"]
+  },
+  {
+    "track_id": "netease_55667788",
+    "track": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "album": "A Night at the Opera",
+    "genre": "Rock",
+    "play_count": 30,
+    "is_liked": true,
+    "rank": 4,
+    "source": "netease",
+    "timestamp_range": "2024-01~2024-12",
+    "context_tags": ["运动", "高能量"]
+  },
+  {
+    "track_id": "netease_99887766",
+    "track": "枫",
+    "artist": "周杰伦",
+    "album": "十一月的萧邦",
+    "genre": "Mandopop",
+    "play_count": 28,
+    "is_liked": true,
+    "rank": 5,
+    "source": "netease",
+    "timestamp_range": "2024-01~2024-12",
+    "context_tags": ["秋天", "散步"]
+  }
+]

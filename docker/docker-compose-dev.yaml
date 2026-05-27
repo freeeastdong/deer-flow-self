@@ -52,6 +52,10 @@ services:
     networks:
       - deer-flow-dev
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 10s
@@ -82,6 +86,10 @@ services:
     networks:
       - deer-flow-dev
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   # Frontend - Next.js Development Server
   frontend:
@@ -107,8 +115,14 @@ services:
       - WATCHPACK_POLLING=true
       - CI=true
       - DEER_FLOW_INTERNAL_GATEWAY_BASE_URL=http://gateway:8001
+      # Cap Node.js heap to prevent unbounded memory growth from Turbopack
+      - NODE_OPTIONS=--max-old-space-size=1536
     env_file:
       - ../frontend/.env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     networks:
       - deer-flow-dev
     restart: unless-stopped
@@ -172,12 +186,89 @@ services:
     networks:
       - deer-flow-dev
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+
+  # ── Music Station (独立音乐电台应用) ────────────────────────────────────
+  music-station-db:
+    image: postgres:15-alpine
+    container_name: music_station_db
+    environment:
+      POSTGRES_USER: music
+      POSTGRES_PASSWORD: music123
+      POSTGRES_DB: music_station
+    ports:
+      - "5433:5432"
+    volumes:
+      - music-station-postgres-data:/var/lib/postgresql/data
+    networks:
+      - deer-flow-dev
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U music -d music_station"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  music-station-redis:
+    image: redis:7-alpine
+    container_name: music_station_redis
+    networks:
+      - deer-flow-dev
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  music-station-backend:
+    build:
+      context: ../../music-station/backend
+      dockerfile: Dockerfile
+    container_name: music_station_backend
+    env_file:
+      - ../.env
+    environment:
+      # 以下变量从 ../.env 读取（env_file 注入），不在此处硬编码，避免 Shell 环境变量缺失导致空值覆盖
+      DATABASE_URL: postgresql+asyncpg://music:music123@music-station-db:5432/music_station
+      REDIS_URL: redis://music-station-redis:6379/0
+      SECRET_KEY: music-station-secret-key
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      DEERFLOW_GATEWAY_URL: http://deer-flow-gateway:8001
+    volumes:
+      # 挂载本地代码，开发时无需重建镜像
+      - ../../music-station/backend/app:/app/app
+      - ../../music-station/backend/scripts:/app/scripts
+      - ../../music-station/backend/alembic:/app/alembic
+      # 挂载本地音乐文件（只读）
+      - H:/JAY专辑AAC:/app/media/local/jay:ro
+      - H:/Taylor Swift全集:/app/media/local/taylor:ro
+    depends_on:
+      music-station-db:
+        condition: service_healthy
+      music-station-redis:
+        condition: service_started
+    networks:
+      - deer-flow-dev
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   # Persist .venv across container restarts so dependencies installed during
   # image build are not shadowed by the host backend/ directory mount.
   gateway-venv:
   gateway-uv-cache:
+  music-station-postgres-data:
 
 networks:
   deer-flow-dev:

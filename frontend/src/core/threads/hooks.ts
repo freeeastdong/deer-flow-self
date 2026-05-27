@@ -107,7 +107,7 @@ export function useThreadStream({
   onFinish,
   onToolEnd,
 }: ThreadStreamOptions) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Track the thread ID that is currently streaming to handle thread changes during streaming
   const [onStreamThreadId, setOnStreamThreadId] = useState(() => threadId);
   // Ref to track current thread ID across async callbacks without causing re-renders,
@@ -481,6 +481,7 @@ export function useThreadStream({
                       ? "low"
                       : undefined),
               thread_id: threadId,
+              locale,
             },
           },
         );

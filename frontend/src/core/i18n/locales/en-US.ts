@@ -173,6 +173,7 @@ export const enUS: Translations = {
     recentChats: "Recent chats",
     demoChats: "Demo chats",
     agents: "Agents",
+    applications: "Applications",
   },
 
   // Agents
@@ -181,6 +182,7 @@ export const enUS: Translations = {
     description:
       "Create and manage custom agents with specialized prompts and capabilities.",
     newAgent: "New Agent",
+    defaultAgent: "Default Agent",
     emptyTitle: "No custom agents yet",
     emptyDescription:
       "Create your first custom agent with a specialized system prompt.",
@@ -257,6 +259,8 @@ export const enUS: Translations = {
     chats: "Chats",
     newChat: "New chat",
     untitled: "Untitled",
+    hedgeFund: "AI Hedge Fund",
+    musicStation: "Music Station",
   },
 
   // Tool calls
@@ -413,6 +417,23 @@ export const enUS: Translations = {
         },
       },
     },
+    account: {
+      profileTitle: "Profile",
+      emailLabel: "Email",
+      roleLabel: "Role",
+      changePasswordTitle: "Change Password",
+      changePasswordDescription: "Update your account password.",
+      currentPasswordPlaceholder: "Current password",
+      newPasswordPlaceholder: "New password",
+      confirmPasswordPlaceholder: "Confirm new password",
+      passwordMismatch: "New passwords do not match",
+      passwordMinLength: "Password must be at least 8 characters",
+      updatePasswordButton: "Update Password",
+      updatingPassword: "Updating...",
+      passwordChangedSuccess: "Password changed successfully",
+      networkError: "Network error. Please try again.",
+      signOutButton: "Sign Out",
+    },
     appearance: {
       themeTitle: "Theme",
       themeDescription:
@@ -429,6 +450,13 @@ export const enUS: Translations = {
     tools: {
       title: "Tools",
       description: "Manage the configuration and enabled status of MCP tools.",
+      mcpLabels: {
+        playwright: {
+          name: "Playwright Browser Automation",
+          description:
+            "Enable AI to navigate web pages, click elements, fill forms, take screenshots, and extract content via Playwright MCP. Requires Node.js ≥ 18.",
+        },
+      },
     },
     skills: {
       title: "Agent Skills",

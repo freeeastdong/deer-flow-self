@@ -229,6 +229,7 @@ class SubagentExecutor:
         thread_data: ThreadDataState | None = None,
         thread_id: str | None = None,
         trace_id: str | None = None,
+        locale: str | None = None,
     ):
         """Initialize the executor.
 
@@ -247,6 +248,7 @@ class SubagentExecutor:
         self.config = config
         self.app_config = app_config
         self.parent_model = parent_model
+        self.locale = locale
         # Resolve eagerly only when it does not require loading config.yaml; otherwise defer
         # to _create_agent (which already loads app_config) so unit tests can construct
         # executors without a config file present.
@@ -281,11 +283,23 @@ class SubagentExecutor:
         # Reuse shared middleware composition with lead agent.
         middlewares = build_subagent_runtime_middlewares(app_config=app_config, model_name=self.model_name, lazy_init=True)
 
+        # Dynamically inject language constraint into system_prompt
+        system_prompt = self.config.system_prompt or ""
+        if self.locale:
+            language_instruction = (
+                f"\n\n<LANGUAGE_CONSTRAINT>\n"
+                f"CRITICAL: The parent conversation is in {self.locale}. "
+                f"YOU MUST respond ONLY in {self.locale}. "
+                f"Do NOT switch languages even if technical outputs are in other languages.\n"
+                f"</LANGUAGE_CONSTRAINT>"
+            )
+            system_prompt = system_prompt + language_instruction
+
         return create_agent(
             model=model,
             tools=self.tools,
             middleware=middlewares,
-            system_prompt=self.config.system_prompt,
+            system_prompt=system_prompt,
             state_schema=ThreadState,
         )
 
@@ -362,6 +376,11 @@ class SubagentExecutor:
         messages: list = []
         # Skill content injected as developer/system messages before the task
         messages.extend(skill_messages)
+        # Language anchor: remind the model to keep the user's language
+        if self.locale:
+            messages.append(SystemMessage(
+                content=f"Reminder: The user is speaking in {self.locale}. Your response must be in {self.locale}."
+            ))
         # Then the actual task
         messages.append(HumanMessage(content=task))
 

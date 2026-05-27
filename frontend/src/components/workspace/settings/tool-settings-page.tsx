@@ -39,32 +39,36 @@ function MCPServerList({
 }: {
   servers: Record<string, MCPServerConfig>;
 }) {
+  const { t } = useI18n();
   const { mutate: enableMCPServer } = useEnableMCPServer();
   return (
     <div className="flex w-full flex-col gap-4">
-      {Object.entries(servers).map(([name, config]) => (
-        <Item className="w-full" variant="outline" key={name}>
-          <ItemContent>
-            <ItemTitle>
-              <div className="flex items-center gap-2">
-                <div>{name}</div>
-              </div>
-            </ItemTitle>
-            <ItemDescription className="line-clamp-4">
-              {config.description}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions>
-            <Switch
-              checked={config.enabled}
-              disabled={env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true"}
-              onCheckedChange={(checked) =>
-                enableMCPServer({ serverName: name, enabled: checked })
-              }
-            />
-          </ItemActions>
-        </Item>
-      ))}
+      {Object.entries(servers).map(([name, config]) => {
+        const label = t.settings.tools.mcpLabels[name];
+        return (
+          <Item className="w-full" variant="outline" key={name}>
+            <ItemContent>
+              <ItemTitle>
+                <div className="flex items-center gap-2">
+                  <div>{label?.name ?? name}</div>
+                </div>
+              </ItemTitle>
+              <ItemDescription className="line-clamp-4">
+                {label?.description ?? config.description}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Switch
+                checked={config.enabled}
+                disabled={env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true"}
+                onCheckedChange={(checked) =>
+                  enableMCPServer({ serverName: name, enabled: checked })
+                }
+              />
+            </ItemActions>
+          </Item>
+        );
+      })}
     </div>
   );
 }

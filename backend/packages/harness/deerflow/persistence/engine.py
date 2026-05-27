@@ -153,7 +153,53 @@ async def init_engine(
         else:
             raise
 
+    # ── Schema patches (dev convenience, runs after create_all) ────────────
+    try:
+        await _run_schema_patches(backend)
+    except Exception:
+        logger.exception("Schema patches failed (non-fatal)")
+
     logger.info("Persistence engine initialized: backend=%s", backend)
+
+
+async def _run_schema_patches(backend: str) -> None:
+    """Apply lightweight schema patches for columns added after initial deploy.
+
+    Alembic is the proper tool for production migrations; this helper
+    smooths over the gap during rapid development when no migration
+    scripts have been generated yet.
+    """
+    from sqlalchemy import inspect, text
+
+    if _engine is None:
+        return
+
+    async with _engine.begin() as conn:
+        # Check whether users.is_active exists (added in admin-dashboard work)
+        if backend == "sqlite":
+            # SQLite: PRAGMA table_info(users)
+            result = await conn.execute(text("PRAGMA table_info(users)"))
+            columns = {row[1] for row in result.fetchall()}
+        else:
+            # Postgres: information_schema.columns
+            result = await conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'users'"
+                )
+            )
+            columns = {row[0] for row in result.fetchall()}
+
+        if "is_active" not in columns:
+            if backend == "sqlite":
+                await conn.execute(
+                    text("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1")
+                )
+            else:
+                await conn.execute(
+                    text("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE")
+                )
+            logger.info("Schema patch applied: added users.is_active")
 
 
 async def init_engine_from_config(config) -> None:

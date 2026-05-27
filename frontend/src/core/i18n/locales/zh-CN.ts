@@ -167,6 +167,7 @@ export const zhCN: Translations = {
     recentChats: "最近的对话",
     demoChats: "演示对话",
     agents: "智能体",
+    applications: "应用",
   },
 
   // Agents
@@ -174,6 +175,7 @@ export const zhCN: Translations = {
     title: "智能体",
     description: "创建和管理具有专属 Prompt 与能力的自定义智能体。",
     newAgent: "新建智能体",
+    defaultAgent: "通用智能体",
     emptyTitle: "还没有自定义智能体",
     emptyDescription: "创建你的第一个自定义智能体，设置专属系统提示词。",
     chat: "对话",
@@ -245,6 +247,8 @@ export const zhCN: Translations = {
     chats: "对话",
     newChat: "新对话",
     untitled: "未命名",
+    hedgeFund: "AI 对冲基金",
+    musicStation: "音乐电台",
   },
 
   // Tool calls
@@ -396,6 +400,23 @@ export const zhCN: Translations = {
         },
       },
     },
+    account: {
+      profileTitle: "个人资料",
+      emailLabel: "邮箱",
+      roleLabel: "角色",
+      changePasswordTitle: "修改密码",
+      changePasswordDescription: "更新你的账号密码。",
+      currentPasswordPlaceholder: "当前密码",
+      newPasswordPlaceholder: "新密码",
+      confirmPasswordPlaceholder: "确认新密码",
+      passwordMismatch: "两次输入的新密码不一致",
+      passwordMinLength: "密码至少 8 位字符",
+      updatePasswordButton: "更新密码",
+      updatingPassword: "更新中...",
+      passwordChangedSuccess: "密码修改成功",
+      networkError: "网络错误，请重试",
+      signOutButton: "退出登录",
+    },
     appearance: {
       themeTitle: "主题",
       themeDescription: "跟随系统或选择固定的界面模式。",
@@ -411,6 +432,13 @@ export const zhCN: Translations = {
     tools: {
       title: "工具",
       description: "管理 MCP 工具的配置和启用状态。",
+      mcpLabels: {
+        playwright: {
+          name: "Playwright 浏览器自动化",
+          description:
+            "让 AI 能够操控真实浏览器：访问网页、点击元素、填写表单、截图以及提取网页内容。需要 Node.js ≥ 18 环境。",
+        },
+      },
     },
     skills: {
       title: "技能",

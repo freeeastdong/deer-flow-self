@@ -36,6 +36,12 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Playwright MCP server globally so stdio transport starts instantly at runtime
+# (avoids per-container npx download delays)
+ARG NPM_REGISTRY
+RUN if [ -n "${NPM_REGISTRY}" ]; then npm config set registry ${NPM_REGISTRY}; fi && \
+    npm install -g @playwright/mcp@latest
+
 # Install uv (source image overridable via UV_IMAGE build arg)
 COPY --from=uv-source /uv /uvx /usr/local/bin/
 

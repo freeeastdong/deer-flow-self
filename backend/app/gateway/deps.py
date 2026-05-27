@@ -179,7 +179,7 @@ def get_local_provider() -> LocalAuthProvider:
     if _cached_local_provider is None:
         from app.gateway.auth.local_provider import LocalAuthProvider
 
-        _cached_local_provider = LocalAuthProvider(repository=_cached_repo)
+        _cached_local_provider = LocalAuthProvider(repository=_cached_repo, session_factory=sf)
     return _cached_local_provider
 
 
@@ -218,6 +218,13 @@ async def get_current_user_from_request(request: Request):
         raise HTTPException(
             status_code=401,
             detail=AuthErrorResponse(code=AuthErrorCode.TOKEN_INVALID, message="Token revoked (password changed)").model_dump(),
+        )
+
+    # Account disabled by admin
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail=AuthErrorResponse(code=AuthErrorCode.FORBIDDEN, message="Account disabled").model_dump(),
         )
 
     return user

@@ -1,7 +1,9 @@
 """Middleware for injecting image details into conversation before LLM call."""
 
 import logging
+import os
 from typing import override
+from urllib.parse import quote
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -91,11 +93,12 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
         # Check if all tool calls have been completed
         return tool_call_ids.issubset(completed_tool_ids)
 
-    def _create_image_details_message(self, state: ViewImageMiddlewareState) -> list[str | dict]:
+    def _create_image_details_message(self, state: ViewImageMiddlewareState, runtime: Runtime) -> list[str | dict]:
         """Create a formatted message with all viewed image details.
 
         Args:
             state: Current state containing viewed_images
+            runtime: Runtime context to extract thread_id for URL construction
 
         Returns:
             List of content blocks (text and images) for the HumanMessage
@@ -108,20 +111,34 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
         # Build the message with image information
         content_blocks: list[str | dict] = [{"type": "text", "text": "Here are the images you've viewed:"}]
 
+        # Get thread_id and base_url for constructing image URLs
+        thread_id = runtime.context.get("thread_id") if runtime.context else None
+        base_url = os.getenv("APP_BASE_URL", "").rstrip("/")
+
         for image_path, image_data in viewed_images.items():
             mime_type = image_data.get("mime_type", "unknown")
-            base64_data = image_data.get("base64", "")
+            stored_path = image_data.get("image_path", "")
 
             # Add text description
             content_blocks.append({"type": "text", "text": f"\n- **{image_path}** ({mime_type})"})
 
-            # Add the actual image data so LLM can "see" it
-            if base64_data:
+            # Add the image via HTTP URL instead of inline base64
+            if stored_path and thread_id and base_url:
+                # Remove /mnt/user-data prefix for URL path
+                relative_path = stored_path
+                if relative_path.startswith("/mnt/user-data/"):
+                    relative_path = relative_path[len("/mnt/user-data/"):]
+                encoded_path = quote(relative_path, safe="/")
+                image_url = f"{base_url}/api/threads/{thread_id}/files/image/{encoded_path}"
                 content_blocks.append(
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"data:{mime_type};base64,{base64_data}"},
+                        "image_url": {"url": image_url},
                     }
+                )
+            else:
+                content_blocks.append(
+                    {"type": "text", "text": f"  (Image URL not available for {image_path})"}
                 )
 
         return content_blocks
@@ -164,11 +181,12 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
 
         return True
 
-    def _inject_image_message(self, state: ViewImageMiddlewareState) -> dict | None:
+    def _inject_image_message(self, state: ViewImageMiddlewareState, runtime: Runtime) -> dict | None:
         """Internal helper to inject image details message.
 
         Args:
             state: Current state
+            runtime: Runtime context for URL construction
 
         Returns:
             State update with additional human message, or None if no update needed
@@ -177,12 +195,12 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
             return None
 
         # Create the image details message with text and image content
-        image_content = self._create_image_details_message(state)
+        image_content = self._create_image_details_message(state, runtime)
 
         # Create a new human message with mixed content (text + images)
         human_msg = HumanMessage(content=image_content)
 
-        logger.debug("Injecting image details message with images before LLM call")
+        logger.debug("Injecting image details message with image URLs before LLM call")
 
         # Return state update with the new message
         return {"messages": [human_msg]}
@@ -193,16 +211,16 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
 
         This runs before each LLM call, checking if the previous turn included view_image
         tool calls that have all completed. If so, it injects a human message with the image
-        details so the LLM can see and analyze the images.
+        URLs so the LLM can see and analyze the images.
 
         Args:
             state: Current state
-            runtime: Runtime context (unused but required by interface)
+            runtime: Runtime context used for thread_id extraction and URL construction
 
         Returns:
             State update with additional human message, or None if no update needed
         """
-        return self._inject_image_message(state)
+        return self._inject_image_message(state, runtime)
 
     @override
     async def abefore_model(self, state: ViewImageMiddlewareState, runtime: Runtime) -> dict | None:
@@ -210,13 +228,13 @@ class ViewImageMiddleware(AgentMiddleware[ViewImageMiddlewareState]):
 
         This runs before each LLM call, checking if the previous turn included view_image
         tool calls that have all completed. If so, it injects a human message with the image
-        details so the LLM can see and analyze the images.
+        URLs so the LLM can see and analyze the images.
 
         Args:
             state: Current state
-            runtime: Runtime context (unused but required by interface)
+            runtime: Runtime context used for thread_id extraction and URL construction
 
         Returns:
             State update with additional human message, or None if no update needed
         """
-        return self._inject_image_message(state)
+        return self._inject_image_message(state, runtime)

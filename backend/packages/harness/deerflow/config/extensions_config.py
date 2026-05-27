@@ -136,17 +136,37 @@ class ExtensionsConfig(BaseModel):
         resolved_path = cls.resolve_config_path(config_path)
         if resolved_path is None:
             # Return empty config if extensions config file is not found
-            return cls(mcp_servers={}, skills={})
+            result = cls(mcp_servers={}, skills={})
+        else:
+            try:
+                with open(resolved_path, encoding="utf-8") as f:
+                    config_data = json.load(f)
+                cls.resolve_env_variables(config_data)
+                result = cls.model_validate(config_data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Extensions config file at {resolved_path} is not valid JSON: {e}") from e
+            except Exception as e:
+                raise RuntimeError(f"Failed to load extensions config from {resolved_path}: {e}") from e
 
-        try:
-            with open(resolved_path, encoding="utf-8") as f:
-                config_data = json.load(f)
-            cls.resolve_env_variables(config_data)
-            return cls.model_validate(config_data)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Extensions config file at {resolved_path} is not valid JSON: {e}") from e
-        except Exception as e:
-            raise RuntimeError(f"Failed to load extensions config from {resolved_path}: {e}") from e
+        # Apply built-in default MCP server configurations
+        # User-defined configurations always take precedence
+        result._apply_builtin_defaults()
+        return result
+
+    def _apply_builtin_defaults(self) -> None:
+        """Apply built-in default MCP server configurations.
+
+        Built-in defaults are only applied when a server is not already
+        configured by the user, ensuring user customizations are preserved.
+        """
+        if "playwright" not in self.mcp_servers:
+            self.mcp_servers["playwright"] = McpServerConfig(
+                enabled=False,
+                type="stdio",
+                command="npx",
+                args=["-y", "@playwright/mcp@latest"],
+                description="Browser automation via Playwright MCP - navigate, click, type, screenshot and extract web content",
+            )
 
     @classmethod
     def resolve_env_variables(cls, config: dict[str, Any]) -> dict[str, Any]:

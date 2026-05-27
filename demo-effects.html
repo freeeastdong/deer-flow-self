@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特效 Demo - 烟花 · 气泡 · 粒子</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0a0a; color:#fff;
+}
+
+/* ===== 导航 ===== */
+.nav {
+  position:fixed; top:0; left:0; right:0; z-index:1000;
+  background:rgba(10,10,10,0.92); backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex; gap:4px; padding:10px 16px; overflow-x:auto;
+}
+.nav button {
+  background:transparent; border:1px solid transparent; color:rgba(255,255,255,0.45);
+  padding:8px 18px; border-radius:999px; font-size:13px; cursor:pointer; white-space:nowrap;
+  transition:all .2s; flex-shrink:0;
+}
+.nav button:hover { color:rgba(255,255,255,0.85); background:rgba(255,255,255,0.06); }
+.nav button.active { color:#fff; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.2); }
+
+/* ===== 场景容器 ===== */
+.scene {
+  position:fixed; top:56px; left:0; right:0; bottom:0;
+  visibility:hidden; opacity:0; pointer-events:none;
+  transition: opacity 0.3s ease;
+  z-index:0;
+  overflow:hidden;
+}
+.scene.active {
+  visibility:visible; opacity:1; pointer-events:auto;
+  z-index:1;
+}
+.scene-info {
+  position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:10;
+  text-align:center; pointer-events:none;
+}
+.scene-info h2 { font-size:18px; font-weight:700; letter-spacing:1px; }
+.scene-info p { font-size:12px; color:rgba(255,255,255,0.45); margin-top:6px; }
+.scene-canvas { position:absolute; top:0; left:0; width:100%; height:100%; }
+
+/* ===== 烟花场景 ===== */
+#fireworks-scene { background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%); }
+
+/* ===== 气泡场景 ===== */
+#bubbles-scene { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+.bubble {
+  position:absolute; border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.05) 60%, transparent 70%);
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.1), 0 0 10px rgba(255,255,255,0.05);
+  cursor:pointer; transition: transform 0.1s;
+  will-change: transform;
+}
+.bubble:hover { transform: scale(1.08); }
+@keyframes floatUp {
+  0% { transform: translateY(0) translateX(0); opacity:0.9; }
+  25% { transform: translateY(-25vh) translateX(var(--sway1,0)); opacity:0.85; }
+  50% { transform: translateY(-50vh) translateX(var(--sway2,0)); opacity:0.8; }
+  75% { transform: translateY(-75vh) translateX(var(--sway3,0)); opacity:0.6; }
+  100% { transform: translateY(-110vh) translateX(var(--sway4,0)); opacity:0; }
+}
+.bubble-pop {
+  position:absolute; pointer-events:none; z-index:50;
+}
+.bubble-pop .ring {
+  position:absolute; border:2px solid rgba(255,255,255,0.6); border-radius:50%;
+  animation: popRing 0.5s ease-out forwards;
+}
+@keyframes popRing {
+  0% { width:0; height:0; opacity:1; margin-left:0; margin-top:0; }
+  100% { width:80px; height:80px; opacity:0; margin-left:-40px; margin-top:-40px; }
+}
+.bubble-pop .droplet {
+  position:absolute; width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.7);
+  animation: popDroplet 0.6s ease-out forwards;
+}
+@keyframes popDroplet {
+  0% { transform: translate(0,0) scale(1); opacity:1; }
+  100% { transform: translate(var(--dx,30px), var(--dy,30px)) scale(0); opacity:0; }
+}
+
+/* ===== 爱心雨场景 ===== */
+#hearts-scene { background: linear-gradient(180deg, #2a0a1a 0%, #0f0a14 100%); }
+.heart {
+  position:absolute; top:-40px; font-size:24px; pointer-events:none;
+  animation: heartFall linear forwards;
+  will-change: transform;
+}
+@keyframes heartFall {
+  0% { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(120vh) rotate(360deg); opacity:0; }
+}
+
+/* ===== 魔法拖尾场景 ===== */
+#trail-scene { background:#000; cursor:none; }
+.trail-cursor {
+  position:fixed; width:20px; height:20px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,200,100,0.9), rgba(255,100,200,0.4), transparent);
+  pointer-events:none; z-index:50; transform:translate(-50%,-50%);
+  mix-blend-mode: screen;
+}
+
+/* ===== 脉冲场景 ===== */
+#pulse-scene { background:#050505; display:flex; align-items:center; justify-content:center; }
+.pulse-ring {
+  position:absolute; border-radius:50%; border:2px solid rgba(100,200,255,0.4);
+  animation: pulseExpand 3s ease-out forwards;
+}
+@keyframes pulseExpand {
+  0% { width:0; height:0; opacity:0.8; margin-left:0; margin-top:0; }
+  100% { width:600px; height:600px; opacity:0; margin-left:-300px; margin-top:-300px; }
+}
+.pulse-btn {
+  position:relative; z-index:10;
+  width:140px; height:140px; border-radius:50%; border:none;
+  background:radial-gradient(circle at 35% 35%, #60a5fa, #3b82f6, #1d4ed8);
+  color:#fff; font-size:16px; font-weight:700; cursor:pointer;
+  box-shadow: 0 0 40px rgba(59,130,246,0.4), inset 0 0 20px rgba(255,255,255,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.pulse-btn:hover { transform:scale(1.05); box-shadow:0 0 60px rgba(59,130,246,0.6), inset 0 0 30px rgba(255,255,255,0.3); }
+.pulse-btn:active { transform:scale(0.95); }
+.pulse-spike {
+  position:absolute; width:4px; background:linear-gradient(to top, transparent, rgba(100,200,255,0.8), transparent);
+  transform-origin:bottom center;
+  animation: spikeGrow 1.5s ease-out forwards;
+}
+@keyframes spikeGrow {
+  0% { height:0; opacity:1; }
+  50% { opacity:0.8; }
+  100% { height:200px; opacity:0; }
+}
+
+/* ===== 涟漪场景 ===== */
+#ripple-scene { background: linear-gradient(180deg, #0c1a1a 0%, #0a1212 100%); }
+
+/* ===== 文字爆炸场景 ===== */
+#textpop-scene { background:#0a0a0a; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px; }
+.textpop-target {
+  font-size:48px; font-weight:800; cursor:pointer; user-select:none;
+  background:linear-gradient(90deg, #f472b6, #a78bfa, #60a5fa);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  transition: transform 0.2s;
+}
+.textpop-target:hover { transform:scale(1.05); }
+.text-particle {
+  position:absolute; font-weight:800; pointer-events:none; z-index:20;
+  animation: textParticleFly 1.2s ease-out forwards;
+}
+@keyframes textParticleFly {
+  0% { transform: translate(0,0) scale(1) rotate(0deg); opacity:1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(var(--rot)); opacity:0; }
+}
+
+/* ===== 霓虹场景 ===== */
+#neon-scene { background:#050505; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; }
+.neon-text {
+  font-size:64px; font-weight:900; letter-spacing:4px; text-transform:uppercase;
+  position:relative;
+  background:linear-gradient(90deg, #0ff, #f0f);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter: drop-shadow(0 0 8px rgba(0,255,255,0.6)) drop-shadow(0 0 20px rgba(255,0,255,0.4));
+  animation: neonPulse 2s ease-in-out infinite alternate;
+}
+@keyframes neonPulse {
+  0% { filter: drop-shadow(0 0 8px rgba(0,255,255,0.6)) drop-shadow(0 0 20px rgba(255,0,255,0.4)); opacity:1; }
+  20% { opacity:0.85; }
+  22% { opacity:0.4; }
+  25% { opacity:0.9; }
+  50% { filter: drop-shadow(0 0 12px rgba(0,255,255,0.8)) drop-shadow(0 0 30px rgba(255,0,255,0.6)); opacity:1; }
+  53% { opacity:0.9; }
+  55% { opacity:0.3; }
+  57% { opacity:1; }
+  100% { filter: drop-shadow(0 0 8px rgba(0,255,255,0.6)) drop-shadow(0 0 20px rgba(255,0,255,0.4)); opacity:1; }
+}
+.neon-sub {
+  font-size:18px; color:rgba(255,255,255,0.3); letter-spacing:8px;
+}
+
+/* ===== 星空场景 ===== */
+#stars-scene { background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%); }
+.star {
+  position:absolute; background:#fff; border-radius:50%;
+  animation: twinkle var(--dur,3s) ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  0% { opacity:0.2; transform:scale(0.8); }
+  100% { opacity:1; transform:scale(1.2); box-shadow:0 0 6px rgba(255,255,255,0.5); }
+}
+.shooting-star {
+  position:absolute; width:100px; height:2px;
+  background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,1));
+  transform:rotate(-45deg);
+  animation: shoot var(--shoot-dur,1s) linear forwards;
+}
+@keyframes shoot {
+  0% { transform:translateX(0) translateY(0) rotate(-45deg); opacity:1; }
+  100% { transform:translateX(-300px) translateY(300px) rotate(-45deg); opacity:0; }
+}
+
+/* ===== 花瓣场景 ===== */
+#petals-scene { background: linear-gradient(180deg, #1a0f14 0%, #0a080a 100%); }
+.petal {
+  position:absolute; pointer-events:none; top:-20px;
+  animation: petalFall var(--fall-dur,10s) linear forwards;
+  will-change: transform;
+}
+@keyframes petalFall {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity:0.9; }
+  25% { transform: translateY(25vh) translateX(var(--sway1,0)) rotate(90deg); opacity:0.85; }
+  50% { transform: translateY(50vh) translateX(var(--sway2,0)) rotate(180deg); opacity:0.8; }
+  75% { transform: translateY(75vh) translateX(var(--sway3,0)) rotate(270deg); opacity:0.6; }
+  100% { transform: translateY(110vh) translateX(var(--sway4,0)) rotate(360deg); opacity:0; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="active" data-target="fireworks">🎆 烟花绽放</button>
+  <button data-target="bubbles">🫧 气泡戳破</button>
+  <button data-target="hearts">💖 爱心雨</button>
+  <button data-target="trail">✨ 魔法拖尾</button>
+  <button data-target="pulse">💥 能量脉冲</button>
+  <button data-target="ripple">💧 水波涟漪</button>
+  <button data-target="textpop">🔤 文字炸裂</button>
+  <button data-target="neon">🌈 霓虹故障</button>
+  <button data-target="stars">🌌 星空流星</button>
+  <button data-target="petals">🌸 樱花飘落</button>
+  <button data-target="startrail">✨ 星空拖尾</button>
+</nav>
+
+<!-- ========== 烟花 ========== -->
+<div id="fireworks-scene" class="scene active">
+  <div class="scene-info">
+    <h2>🎆 烟花绽放</h2>
+    <p>点击屏幕任意位置发射烟花</p>
+  </div>
+  <canvas id="fireworks-canvas" class="scene-canvas"></canvas>
+</div>
+
+<!-- ========== 气泡 ========== -->
+<div id="bubbles-scene" class="scene">
+  <div class="scene-info">
+    <h2>🫧 气泡戳破</h2>
+    <p>移动鼠标戳破气泡，点击屏幕生成更多</p>
+  </div>
+  <div class="scene-info" style="top:auto; bottom:24px;"><p>已戳破: <span id="pop-count">0</span></p></div>
+  <div id="bubble-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;"></div>
+</div>
+
+<!-- ========== 爱心雨 ========== -->
+<div id="hearts-scene" class="scene">
+  <div class="scene-info">
+    <h2>💖 爱心雨</h2>
+    <p>满屏爱心飘落，点击加速</p>
+  </div>
+  <div id="hearts-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;"></div>
+</div>
+
+<!-- ========== 魔法拖尾 ========== -->
+<div id="trail-scene" class="scene">
+  <div class="scene-info">
+    <h2>✨ 魔法拖尾</h2>
+    <p>移动鼠标，留下星光轨迹</p>
+  </div>
+  <canvas id="trail-canvas" class="scene-canvas"></canvas>
+  <div class="trail-cursor" id="trail-cursor"></div>
+</div>
+
+<!-- ========== 能量脉冲 ========== -->
+<div id="pulse-scene" class="scene">
+  <div class="scene-info" style="top:16px;">
+    <h2>💥 能量脉冲</h2>
+    <p>点击按钮释放能量</p>
+  </div>
+  <button class="pulse-btn" id="pulse-btn">PULSE</button>
+  <div id="pulse-container" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
+</div>
+
+<!-- ========== 涟漪 ========== -->
+<div id="ripple-scene" class="scene">
+  <div class="scene-info">
+    <h2>💧 水波涟漪</h2>
+    <p>点击水面产生涟漪</p>
+  </div>
+  <canvas id="ripple-canvas" class="scene-canvas"></canvas>
+</div>
+
+<!-- ========== 文字爆炸 ========== -->
+<div id="textpop-scene" class="scene">
+  <div class="scene-info" style="top:16px;">
+    <h2>🔤 文字炸裂</h2>
+    <p>点击文字看它炸成粒子</p>
+  </div>
+  <div class="textpop-target" data-text="SURPRISE">SURPRISE</div>
+  <div class="textpop-target" data-text="DEERFLOW" style="font-size:36px;">DEERFLOW</div>
+</div>
+
+<!-- ========== 霓虹 ========== -->
+<div id="neon-scene" class="scene">
+  <div class="neon-text" data-text="DEERFLOW">DEERFLOW</div>
+  <div class="neon-sub">点击任意处切换颜色</div>
+</div>
+
+<!-- ========== 星空 ========== -->
+<div id="stars-scene" class="scene">
+  <div class="scene-info">
+    <h2>🌌 星空流星</h2>
+    <p>静谧星空，随机流星划过</p>
+  </div>
+  <div id="stars-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;"></div>
+</div>
+
+<!-- ========== 花瓣 ========== -->
+<div id="petals-scene" class="scene">
+  <div class="scene-info">
+    <h2>🌸 樱花飘落</h2>
+    <p>点击屏幕飘落更多花瓣</p>
+  </div>
+  <div id="petals-container" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden;"></div>
+</div>
+
+<!-- ========== 星空拖尾 ========== -->
+<div id="startrail-scene" class="scene">
+  <div class="scene-info">
+    <h2>✨ 星空拖尾</h2>
+    <p>静谧星空下，移动鼠标绘制星光轨迹</p>
+  </div>
+  <canvas id="startrail-canvas" class="scene-canvas" style="z-index:1;"></canvas>
+  <div id="startrail-stars" style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; z-index:0;"></div>
+  <div class="trail-cursor" id="startrail-cursor" style="z-index:2;"></div>
+</div>
+
+<script>
+// ===================== 标签切换 =====================
+const navBtns = document.querySelectorAll('.nav button');
+const scenes = document.querySelectorAll('.scene');
+let activeScene = 'fireworks';
+
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    activeScene = target;
+    navBtns.forEach(b => b.classList.toggle('active', b === btn));
+    scenes.forEach(s => s.classList.toggle('active', s.id === target + '-scene'));
+    if (target === 'fireworks') startFireworks();
+    else stopFireworks();
+    if (target === 'trail') startTrail();
+    else stopTrail();
+    if (target === 'ripple') startRipple();
+    else stopRipple();
+    if (target === 'startrail') startStarTrail();
+    else stopStarTrail();
+  });
+});
+
+// ===================== 1. 烟花 =====================
+const fwCanvas = document.getElementById('fireworks-canvas');
+const fwCtx = fwCanvas.getContext('2d');
+let fwW, fwH, fwRAF;
+const fireworks = [], particles = [];
+
+function resizeFW() {
+  const rect = fwCanvas.parentElement.getBoundingClientRect();
+  fwW = fwCanvas.width = Math.floor(rect.width);
+  fwH = fwCanvas.height = Math.floor(rect.height);
+}
+window.addEventListener('resize', resizeFW);
+resizeFW();
+
+class Firework {
+  constructor(tx, ty) {
+    this.x = Math.random() * fwW;
+    this.y = fwH;
+    this.tx = tx; this.ty = ty;
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const speed = 8 + Math.random() * 5;
+    this.vx = (dx / dist) * speed;
+    this.vy = (dy / dist) * speed;
+    this.hue = Math.random() * 360;
+    this.trail = [];
+    this.dead = false;
+  }
+  update() {
+    if (this.dead) return false;
+    this.trail.push({x:this.x, y:this.y, hue:this.hue});
+    if (this.trail.length > 12) this.trail.shift();
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.15;
+    const dx = this.x - this.tx;
+    const dy = this.y - this.ty;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 20 || (this.vy > 0 && this.y > this.ty && dist < 100)) {
+      explode(this.x, this.y, this.hue);
+      this.dead = true;
+      return false;
+    }
+    return true;
+  }
+  draw() {
+    fwCtx.save();
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = i / this.trail.length;
+      fwCtx.fillStyle = `hsla(${t.hue},100%,60%,${alpha})`;
+      fwCtx.beginPath();
+      fwCtx.arc(t.x, t.y, 2.5 * alpha, 0, Math.PI * 2);
+      fwCtx.fill();
+    }
+    fwCtx.restore();
+  }
+}
+
+class Particle {
+  constructor(x, y, hue) {
+    this.x = x; this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 1;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.hue = hue + (Math.random() - 0.5) * 50;
+    this.alpha = 1;
+    this.decay = 0.015 + Math.random() * 0.015;
+    this.gravity = 0.08;
+  }
+  update() {
+    this.vx *= 0.96;
+    this.vy *= 0.96;
+    this.vy += this.gravity;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.alpha -= this.decay;
+    return this.alpha > 0;
+  }
+  draw() {
+    if (this.alpha <= 0) return;
+    fwCtx.save();
+    fwCtx.globalAlpha = this.alpha;
+    fwCtx.fillStyle = `hsl(${this.hue},100%,65%)`;
+    fwCtx.shadowBlur = 6;
+    fwCtx.shadowColor = `hsl(${this.hue},100%,50%)`;
+    fwCtx.beginPath();
+    fwCtx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
+    fwCtx.fill();
+    fwCtx.restore();
+  }
+}
+
+function explode(x, y, hue) {
+  for (let i = 0; i < 60; i++) particles.push(new Particle(x, y, hue));
+  setTimeout(() => {
+    for (let i = 0; i < 25; i++) {
+      particles.push(new Particle(x + (Math.random()-0.5)*40, y + (Math.random()-0.5)*40, hue + 40));
+    }
+  }, 120);
+}
+
+let fwRunning = false;
+function fwLoop() {
+  if (!fwRunning) return;
+  fwCtx.fillStyle = 'rgba(9,10,15,0.2)';
+  fwCtx.fillRect(0, 0, fwW, fwH);
+  for (let i = fireworks.length - 1; i >= 0; i--) {
+    fireworks[i].draw();
+    if (!fireworks[i].update()) fireworks.splice(i, 1);
+  }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].draw();
+    if (!particles[i].update()) particles.splice(i, 1);
+  }
+  fwRAF = requestAnimationFrame(fwLoop);
+}
+function startFireworks() {
+  if (fwRunning) return;
+  fwRunning = true;
+  fwLoop();
+}
+function stopFireworks() {
+  fwRunning = false;
+  cancelAnimationFrame(fwRAF);
+}
+startFireworks();
+
+document.getElementById('fireworks-scene').addEventListener('click', e => {
+  const rect = fwCanvas.getBoundingClientRect();
+  fireworks.push(new Firework(e.clientX - rect.left, e.clientY - rect.top));
+});
+
+setInterval(() => {
+  if (activeScene !== 'fireworks') return;
+  if (Math.random() > 0.5) return;
+  const rect = fwCanvas.getBoundingClientRect();
+  fireworks.push(new Firework(Math.random() * rect.width * 0.8 + rect.width * 0.1, Math.random() * rect.height * 0.4 + 30));
+}, 900);
+
+// ===================== 2. 气泡 =====================
+const bubbleContainer = document.getElementById('bubble-container');
+let popCount = 0;
+
+function createBubble(x) {
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  const size = 40 + Math.random() * 80;
+  b.style.width = size + 'px';
+  b.style.height = size + 'px';
+  b.style.left = ((typeof x === 'number' ? x : Math.random() * window.innerWidth) - size/2) + 'px';
+  b.style.bottom = (-size) + 'px';
+  b.style.setProperty('--sway1', (Math.random() * 100 - 50) + 'px');
+  b.style.setProperty('--sway2', (Math.random() * 150 - 75) + 'px');
+  b.style.setProperty('--sway3', (Math.random() * 100 - 50) + 'px');
+  b.style.setProperty('--sway4', (Math.random() * 60 - 30) + 'px');
+  b.style.animation = `floatUp ${6 + Math.random() * 6}s linear forwards`;
+  b.addEventListener('mouseenter', () => popBubble(b));
+  b.addEventListener('click', e => { e.stopPropagation(); popBubble(b); });
+  bubbleContainer.appendChild(b);
+  setTimeout(() => { if (b.parentNode) b.remove(); }, 13000);
+}
+
+function popBubble(b) {
+  if (b._popped) return;
+  b._popped = true;
+  const rect = b.getBoundingClientRect();
+  const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+  const pop = document.createElement('div');
+  pop.className = 'bubble-pop';
+  pop.style.left = cx + 'px';
+  pop.style.top = cy + 'px';
+  const ring = document.createElement('div');
+  ring.className = 'ring';
+  pop.appendChild(ring);
+  for (let i = 0; i < 8; i++) {
+    const d = document.createElement('div');
+    d.className = 'droplet';
+    const angle = (Math.PI * 2 / 8) * i;
+    d.style.setProperty('--dx', Math.cos(angle) * 50 + 'px');
+    d.style.setProperty('--dy', Math.sin(angle) * 50 + 'px');
+    pop.appendChild(d);
+  }
+  bubbleContainer.appendChild(pop);
+  setTimeout(() => pop.remove(), 700);
+  b.remove();
+  popCount++;
+  document.getElementById('pop-count').textContent = popCount;
+}
+
+setInterval(() => {
+  if (activeScene !== 'bubbles') return;
+  createBubble();
+}, 500);
+
+document.getElementById('bubbles-scene').addEventListener('click', e => {
+  if (e.target.classList.contains('bubble')) return;
+  createBubble(e.clientX);
+});
+
+// ===================== 3. 爱心雨 =====================
+const heartsContainer = document.getElementById('hearts-container');
+const heartColors = ['#f472b6', '#fb7185', '#e879f9', '#c084fc', '#a78bfa', '#818cf8', '#60a5fa', '#38bdf8'];
+function createHeart() {
+  const h = document.createElement('div');
+  h.className = 'heart';
+  h.textContent = ['💖','💗','💓','💕','❤️','🧡','💛','💚','💙','💜'][Math.floor(Math.random()*10)];
+  h.style.left = Math.random() * 100 + 'vw';
+  h.style.fontSize = (16 + Math.random() * 24) + 'px';
+  h.style.color = heartColors[Math.floor(Math.random() * heartColors.length)];
+  h.style.animationDuration = (4 + Math.random() * 4) + 's';
+  heartsContainer.appendChild(h);
+  setTimeout(() => h.remove(), 10000);
+}
+setInterval(() => {
+  if (activeScene !== 'hearts') return;
+  createHeart();
+}, 300);
+document.getElementById('hearts-scene').addEventListener('click', () => {
+  for (let i = 0; i < 12; i++) setTimeout(createHeart, i * 60);
+});
+
+// ===================== 4. 魔法拖尾 =====================
+const trailCanvas = document.getElementById('trail-canvas');
+const trailCtx = trailCanvas.getContext('2d');
+const trailCursor = document.getElementById('trail-cursor');
+let trailW, trailH, trailRAF, trailRunning = false;
+const trailPoints = [];
+
+function resizeTrail() {
+  const rect = trailCanvas.parentElement.getBoundingClientRect();
+  trailW = trailCanvas.width = Math.floor(rect.width);
+  trailH = trailCanvas.height = Math.floor(rect.height);
+}
+window.addEventListener('resize', resizeTrail);
+resizeTrail();
+
+let mx = trailW/2, my = trailH/2;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  trailCursor.style.left = mx + 'px';
+  trailCursor.style.top = my + 'px';
+  if (activeScene === 'trail') {
+    trailPoints.push({ x: mx, y: my - 56, age: 0, hue: (Date.now() / 8) % 360 });
+  }
+});
+
+function trailLoop() {
+  if (!trailRunning) return;
+  trailCtx.fillStyle = 'rgba(0,0,0,0.15)';
+  trailCtx.fillRect(0, 0, trailW, trailH);
+  for (let i = trailPoints.length - 1; i >= 0; i--) {
+    const p = trailPoints[i];
+    p.age++;
+    if (p.age > 50) { trailPoints.splice(i, 1); continue; }
+    const alpha = 1 - p.age / 50;
+    const size = (1 - p.age / 50) * 14;
+    trailCtx.save();
+    trailCtx.beginPath();
+    trailCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    trailCtx.fillStyle = `hsla(${p.hue},80%,60%,${alpha})`;
+    trailCtx.shadowBlur = 18;
+    trailCtx.shadowColor = `hsla(${p.hue},80%,60%,${alpha})`;
+    trailCtx.fill();
+    trailCtx.restore();
+  }
+  trailRAF = requestAnimationFrame(trailLoop);
+}
+function startTrail() {
+  if (trailRunning) return;
+  trailRunning = true;
+  trailLoop();
+}
+function stopTrail() {
+  trailRunning = false;
+  cancelAnimationFrame(trailRAF);
+}
+startTrail();
+
+// ===================== 5. 能量脉冲 =====================
+const pulseBtn = document.getElementById('pulse-btn');
+const pulseContainer = document.getElementById('pulse-container');
+
+pulseBtn.addEventListener('click', () => {
+  const rect = pulseBtn.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2 - 56;
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const ring = document.createElement('div');
+      ring.className = 'pulse-ring';
+      ring.style.left = cx + 'px';
+      ring.style.top = cy + 'px';
+      pulseContainer.appendChild(ring);
+      setTimeout(() => ring.remove(), 3000);
+    }, i * 350);
+  }
+  for (let i = 0; i < 16; i++) {
+    const spike = document.createElement('div');
+    spike.className = 'pulse-spike';
+    const angle = (Math.PI * 2 / 16) * i;
+    spike.style.left = cx + 'px';
+    spike.style.top = cy + 'px';
+    spike.style.transform = `rotate(${angle * 180 / Math.PI - 90}deg)`;
+    pulseContainer.appendChild(spike);
+    setTimeout(() => spike.remove(), 1500);
+  }
+  pulseBtn.style.transform = 'scale(0.9)';
+  setTimeout(() => pulseBtn.style.transform = '', 200);
+});
+
+// ===================== 6. 水波涟漪 =====================
+const ripCanvas = document.getElementById('ripple-canvas');
+const ripCtx = ripCanvas.getContext('2d');
+let ripW, ripH, ripRAF, ripRunning = false;
+const ripples = [];
+
+function resizeRipple() {
+  const rect = ripCanvas.parentElement.getBoundingClientRect();
+  ripW = ripCanvas.width = Math.floor(rect.width);
+  ripH = ripCanvas.height = Math.floor(rect.height);
+}
+window.addEventListener('resize', resizeRipple);
+resizeRipple();
+
+class Ripple {
+  constructor(x, y) {
+    this.x = x; this.y = y; this.r = 0;
+    this.maxR = 120 + Math.random() * 80;
+    this.alpha = 0.5; this.speed = 2 + Math.random();
+  }
+  update() {
+    this.r += this.speed;
+    this.alpha = 0.5 * (1 - this.r / this.maxR);
+    return this.alpha > 0;
+  }
+  draw() {
+    ripCtx.save();
+    ripCtx.globalAlpha = this.alpha;
+    ripCtx.strokeStyle = 'rgba(100,200,255,0.6)';
+    ripCtx.lineWidth = 2;
+    ripCtx.beginPath();
+    ripCtx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ripCtx.stroke();
+    if (this.r > 15) {
+      ripCtx.strokeStyle = 'rgba(100,200,255,0.25)';
+      ripCtx.lineWidth = 1;
+      ripCtx.beginPath();
+      ripCtx.arc(this.x, this.y, this.r - 12, 0, Math.PI * 2);
+      ripCtx.stroke();
+    }
+    ripCtx.restore();
+  }
+}
+
+function ripLoop() {
+  if (!ripRunning) return;
+  ripCtx.fillStyle = 'rgba(10,24,24,0.18)';
+  ripCtx.fillRect(0, 0, ripW, ripH);
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    ripples[i].draw();
+    if (!ripples[i].update()) ripples.splice(i, 1);
+  }
+  ripRAF = requestAnimationFrame(ripLoop);
+}
+function startRipple() {
+  if (ripRunning) return;
+  ripRunning = true;
+  ripLoop();
+}
+function stopRipple() {
+  ripRunning = false;
+  cancelAnimationFrame(ripRAF);
+}
+startRipple();
+
+document.getElementById('ripple-scene').addEventListener('click', e => {
+  const rect = ripCanvas.getBoundingClientRect();
+  ripples.push(new Ripple(e.clientX - rect.left, e.clientY - rect.top));
+  setTimeout(() => ripples.push(new Ripple(e.clientX - rect.left, e.clientY - rect.top)), 180);
+});
+
+// ===================== 7. 文字爆炸 =====================
+document.querySelectorAll('.textpop-target').forEach(el => {
+  el.addEventListener('click', () => {
+    const rect = el.getBoundingClientRect();
+    const text = el.dataset.text;
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    for (let i = 0; i < text.length; i++) {
+      const p = document.createElement('div');
+      p.className = 'text-particle';
+      p.textContent = text[i];
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.fontSize = el.style.fontSize || '48px';
+      p.style.color = ['#f472b6','#a78bfa','#60a5fa','#38bdf8','#34d399','#fbbf24'][i % 6];
+      const angle = (Math.PI * 2 / text.length) * i + (Math.random() - 0.5) * 0.5;
+      const dist = 100 + Math.random() * 200;
+      p.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+      p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+      document.getElementById('textpop-scene').appendChild(p);
+      setTimeout(() => p.remove(), 1200);
+    }
+    el.style.visibility = 'hidden';
+    setTimeout(() => el.style.visibility = 'visible', 1200);
+  });
+});
+
+// ===================== 8. 霓虹 =====================
+const neonColors = [
+  ['#0ff','#f0f'], ['#0f0','#ff0'], ['#f00','#00f'], ['#fa0','#0af'], ['#f0a','#af0']
+];
+let neonIdx = 0;
+document.getElementById('neon-scene').addEventListener('click', () => {
+  neonIdx = (neonIdx + 1) % neonColors.length;
+  const [c1, c2] = neonColors[neonIdx];
+  const el = document.querySelector('.neon-text');
+  el.style.background = `linear-gradient(90deg, ${c1}, ${c2})`;
+  el.style.webkitBackgroundClip = 'text';
+  el.style.webkitTextFillColor = 'transparent';
+  el.style.backgroundClip = 'text';
+  // 更新 drop-shadow 颜色
+  el.style.filter = `drop-shadow(0 0 8px ${c1}80) drop-shadow(0 0 20px ${c2}60)`;
+});
+
+// ===================== 9. 星空 =====================
+const starsContainer = document.getElementById('stars-container');
+for (let i = 0; i < 150; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = 1 + Math.random() * 2.5;
+  s.style.width = size + 'px'; s.style.height = size + 'px';
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top = Math.random() * 100 + '%';
+  s.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+  s.style.animationDelay = Math.random() * 4 + 's';
+  starsContainer.appendChild(s);
+}
+
+function createShootingStar() {
+  if (activeScene !== 'stars') return;
+  const s = document.createElement('div');
+  s.className = 'shooting-star';
+  s.style.left = (Math.random() * 60 + 20) + '%';
+  s.style.top = (Math.random() * 30) + '%';
+  s.style.setProperty('--shoot-dur', (0.8 + Math.random() * 0.6) + 's');
+  starsContainer.appendChild(s);
+  setTimeout(() => s.remove(), 2000);
+}
+setInterval(createShootingStar, 2000);
+
+// ===================== 10. 花瓣 =====================
+const petalsContainer = document.getElementById('petals-container');
+const petalColors = ['#ffb7c5', '#ffc0cb', '#ffd1dc', '#f4a0b5', '#e68a9f'];
+
+function createPetal(x) {
+  const p = document.createElement('div');
+  p.className = 'petal';
+  const size = 12 + Math.random() * 16;
+  p.style.width = size + 'px';
+  p.style.height = (size * 0.7) + 'px';
+  p.style.left = (typeof x === 'number' ? x : Math.random() * 100) + 'vw';
+  p.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+  p.style.background = petalColors[Math.floor(Math.random() * petalColors.length)];
+  p.style.opacity = '0.7';
+  p.style.setProperty('--sway1', (Math.random() * 80 - 40) + 'px');
+  p.style.setProperty('--sway2', (Math.random() * 120 - 60) + 'px');
+  p.style.setProperty('--sway3', (Math.random() * 80 - 40) + 'px');
+  p.style.setProperty('--sway4', (Math.random() * 40 - 20) + 'px');
+  p.style.setProperty('--fall-dur', (8 + Math.random() * 6) + 's');
+  petalsContainer.appendChild(p);
+  setTimeout(() => p.remove(), 16000);
+}
+
+setInterval(() => {
+  if (activeScene !== 'petals') return;
+  createPetal();
+}, 300);
+
+document.getElementById('petals-scene').addEventListener('click', e => {
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => createPetal((e.clientX / window.innerWidth) * 100 + (Math.random() * 20 - 10)), i * 60);
+  }
+});
+
+// ===================== 11. 星空拖尾 =====================
+const stCanvas = document.getElementById('startrail-canvas');
+const stCtx = stCanvas.getContext('2d');
+const stCursor = document.getElementById('startrail-cursor');
+const stStarsContainer = document.getElementById('startrail-stars');
+let stW, stH, stRAF, stRunning = false;
+const stPoints = [];
+
+// 初始化星空背景
+for (let i = 0; i < 150; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = 1 + Math.random() * 2.5;
+  s.style.width = size + 'px'; s.style.height = size + 'px';
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top = Math.random() * 100 + '%';
+  s.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+  s.style.animationDelay = Math.random() * 4 + 's';
+  stStarsContainer.appendChild(s);
+}
+
+function createStShootingStar() {
+  if (activeScene !== 'startrail') return;
+  const s = document.createElement('div');
+  s.className = 'shooting-star';
+  s.style.left = (Math.random() * 60 + 20) + '%';
+  s.style.top = (Math.random() * 30) + '%';
+  s.style.setProperty('--shoot-dur', (0.8 + Math.random() * 0.6) + 's');
+  stStarsContainer.appendChild(s);
+  setTimeout(() => s.remove(), 2000);
+}
+setInterval(createStShootingStar, 2000);
+
+function resizeStarTrail() {
+  const rect = stCanvas.parentElement.getBoundingClientRect();
+  stW = stCanvas.width = Math.floor(rect.width);
+  stH = stCanvas.height = Math.floor(rect.height);
+}
+window.addEventListener('resize', resizeStarTrail);
+resizeStarTrail();
+
+document.addEventListener('mousemove', e => {
+  stCursor.style.left = e.clientX + 'px';
+  stCursor.style.top = e.clientY + 'px';
+  if (activeScene === 'startrail') {
+    stPoints.push({ x: e.clientX, y: e.clientY - 56, age: 0, hue: (Date.now() / 8) % 360 });
+  }
+});
+
+function starTrailLoop() {
+  if (!stRunning) return;
+  // 用 destination-out 让旧像素逐渐消失，透出底层星空背景
+  stCtx.globalCompositeOperation = 'destination-out';
+  stCtx.fillStyle = 'rgba(0,0,0,0.06)';
+  stCtx.fillRect(0, 0, stW, stH);
+  stCtx.globalCompositeOperation = 'source-over';
+
+  for (let i = stPoints.length - 1; i >= 0; i--) {
+    const p = stPoints[i];
+    p.age++;
+    if (p.age > 50) { stPoints.splice(i, 1); continue; }
+    const alpha = 1 - p.age / 50;
+    // 缩小60%：原来最大14px -> 8.4px
+    const size = (1 - p.age / 50) * 8.4;
+    stCtx.beginPath();
+    stCtx.arc(p.x, p.y, Math.max(size, 0.5), 0, Math.PI * 2);
+    stCtx.fillStyle = `hsla(${p.hue},90%,75%,${alpha})`;
+    stCtx.fill();
+  }
+  stRAF = requestAnimationFrame(starTrailLoop);
+}
+function startStarTrail() {
+  if (stRunning) return;
+  stRunning = true;
+  // 切回该场景时清空残留
+  stCtx.clearRect(0, 0, stW, stH);
+  starTrailLoop();
+}
+function stopStarTrail() {
+  stRunning = false;
+  cancelAnimationFrame(stRAF);
+}
+// 不在初始加载时启动，等切换到该场景再启动
+
+</script>
+</body>
+</html>

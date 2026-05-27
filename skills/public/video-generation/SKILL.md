@@ -7,7 +7,11 @@ description: Use this skill when the user requests to generate, create, or imagi
 
 ## Overview
 
-This skill generates high-quality videos using structured prompts and a Python script. The workflow includes creating JSON-formatted prompts and executing video generation with optional reference image.
+This skill generates high-quality videos using structured prompts and a local ComfyUI instance (Wan workflow).
+
+The default workflow has been upgraded to support **long-form video generation** (10 seconds by default, extendable) via Kijai's `ComfyUI-WanVideoWrapper` with temporal sliding windows. It is optimized for stability on consumer GPUs (e.g., RTX 3060 12GB) — low VRAM usage, no OOM risk, at the cost of slower generation speed.
+
+The legacy 2-second workflow (`text_to_video_wan.json`) is preserved and can be restored by deleting or renaming the long workflow file.
 
 ## Core Capabilities
 
@@ -31,29 +35,31 @@ When a user requests video generation, identify:
 
 Generate a structured JSON file in `/mnt/user-data/workspace/` with naming pattern: `{descriptive-name}.json`
 
-### Step 3: Create Reference Image (Optional when image-generation skill is available)
-
-Generate reference image for the video generation.
-
-- If only 1 image is provided, use it as the guided frame of the video
-
 ### Step 3: Execute Generation
 
 Call the Python script:
 ```bash
 python /mnt/skills/public/video-generation/scripts/generate.py \
   --prompt-file /mnt/user-data/workspace/prompt-file.json \
-  --reference-images /path/to/ref1.jpg \
   --output-file /mnt/user-data/outputs/generated-video.mp4 \
-  --aspect-ratio 16:9
+  --aspect-ratio 16:9 \
+  --duration 10.0
 ```
+
+Environment variables:
+
+- `COMFYUI_BASE_URL`: URL of the local ComfyUI API (default: `http://host.docker.internal:8188`)
+
+[!NOTE]
+Reference images are not supported by the current Wan workflow and will be ignored if provided.
 
 Parameters:
 
 - `--prompt-file`: Absolute path to JSON prompt file (required)
 - `--reference-images`: Absolute paths to reference image (optional)
-- `--output-file`: Absolute path to output image file (required)
-- `--aspect-ratio`: Aspect ratio of the generated image (optional, default: 16:9)
+- `--output-file`: Absolute path to output video file (required)
+- `--aspect-ratio`: Aspect ratio of the generated video (optional, default: 16:9)
+- `--duration`: Target video duration in seconds (optional, default: 10.0)
 
 [!NOTE]
 Do NOT read the python file, instead just call it with the parameters.
@@ -118,9 +124,40 @@ python /mnt/skills/public/video-generation/scripts/generate.py \
   --prompt-file /mnt/user-data/workspace/narnia-farewell-scene.json \
   --reference-images /mnt/user-data/outputs/narnia-farewell-scene-01.jpg \
   --output-file /mnt/user-data/outputs/narnia-farewell-scene-01.mp4 \
-  --aspect-ratio 16:9
+  --aspect-ratio 16:9 \
+  --duration 10.0
 ```
 > Do NOT read the python file, just call it with the parameters.
+
+## Setup Requirements (One-time)
+
+### 1. Install ComfyUI Custom Nodes
+
+Open ComfyUI Manager and install:
+- **`ComfyUI-WanVideoWrapper`** (by kijai) — core nodes for long video generation
+- **`ComfyUI-VideoHelperSuite`** — recommended video utility nodes
+
+Restart ComfyUI after installation.
+
+### 2. Model File Location
+
+The long-video workflow expects the diffusion model in a different folder than the legacy workflow:
+
+| Model | Required location |
+|-------|------------------|
+| `wan2.1_t2v_1.3B_fp16.safetensors` | `ComfyUI/models/diffusion_models/` |
+| `wan_2.1_vae.safetensors` | `ComfyUI/models/vae/` (no change) |
+| `umt5_xxl_fp8_e4m3fn_scaled.safetensors` | `ComfyUI/models/clip/` (no change) |
+
+If your 1.3B model is currently in `models/unet/` or `models/checkpoints/`, copy or symlink it to `models/diffusion_models/`.
+
+### 3. Switching Back to Legacy Workflow
+
+To restore the original 2-second video behavior, simply delete or rename:
+```
+skills/public/video-generation/text_to_video_wan_long.json
+```
+`generate.py` will automatically fall back to `text_to_video_wan.json`.
 
 ## Output Handling
 

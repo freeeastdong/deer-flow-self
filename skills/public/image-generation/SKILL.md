@@ -7,7 +7,7 @@ description: Use this skill when the user requests to generate, create, imagine,
 
 ## Overview
 
-This skill generates high-quality images using structured prompts and a Python script. The workflow includes creating JSON-formatted prompts and executing image generation with optional reference images.
+This skill generates high-quality images using structured prompts and a local ComfyUI instance. The workflow includes creating JSON-formatted prompts and executing image generation with optional reference images.
 
 ## Core Capabilities
 
@@ -39,7 +39,7 @@ Call the Python script:
 python /mnt/skills/public/image-generation/scripts/generate.py \
   --prompt-file /mnt/user-data/workspace/prompt-file.json \
   --reference-images /path/to/ref1.jpg /path/to/ref2.png \
-  --output-file /mnt/user-data/outputs/generated-image.jpg
+  --output-file /mnt/user-data/outputs/generated-image.jpg \
   --aspect-ratio 16:9
 ```
 
@@ -49,6 +49,13 @@ Parameters:
 - `--reference-images`: Absolute paths to reference images (optional, space-separated)
 - `--output-file`: Absolute path to output image file (required)
 - `--aspect-ratio`: Aspect ratio of the generated image (optional, default: 16:9)
+
+Environment variables:
+
+- `COMFYUI_BASE_URL`: URL of the local ComfyUI API (default: `http://host.docker.internal:8188`)
+- `COMFYUI_WORKFLOW_PATH`: Path to a custom ComfyUI API workflow JSON (optional).  
+  If not set, the script automatically uses the bundled custom workflow `image_flux2_klein_text_to_image.json` (Flux2 Klein) when it exists.
+- `COMFYUI_CHECKPOINT`: Checkpoint / model filename in ComfyUI (only required when falling back to the built-in default txt2img workflow)
 
 [!NOTE]
 Do NOT read the python file, just call it with the parameters.

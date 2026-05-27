@@ -15,9 +15,10 @@ there is no matching entity directory.
 """
 
 from deerflow.persistence.feedback.model import FeedbackRow
+from deerflow.persistence.invite_code.model import InviteCodeRow
 from deerflow.persistence.models.run_event import RunEventRow
 from deerflow.persistence.run.model import RunRow
 from deerflow.persistence.thread_meta.model import ThreadMetaRow
 from deerflow.persistence.user.model import UserRow
 
-__all__ = ["FeedbackRow", "RunEventRow", "RunRow", "ThreadMetaRow", "UserRow"]
+__all__ = ["FeedbackRow", "InviteCodeRow", "RunEventRow", "RunRow", "ThreadMetaRow", "UserRow"]

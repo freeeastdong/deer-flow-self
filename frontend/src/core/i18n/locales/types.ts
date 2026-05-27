@@ -117,6 +117,7 @@ export interface Translations {
     chats: string;
     demoChats: string;
     agents: string;
+    applications: string;
   };
 
   // Agents
@@ -189,6 +190,8 @@ export interface Translations {
     chats: string;
     newChat: string;
     untitled: string;
+    hedgeFund: string;
+    musicStation: string;
   };
 
   // Tool calls
@@ -336,6 +339,23 @@ export interface Translations {
         };
       };
     };
+    account: {
+      profileTitle: string;
+      emailLabel: string;
+      roleLabel: string;
+      changePasswordTitle: string;
+      changePasswordDescription: string;
+      currentPasswordPlaceholder: string;
+      newPasswordPlaceholder: string;
+      confirmPasswordPlaceholder: string;
+      passwordMismatch: string;
+      passwordMinLength: string;
+      updatePasswordButton: string;
+      updatingPassword: string;
+      passwordChangedSuccess: string;
+      networkError: string;
+      signOutButton: string;
+    };
     appearance: {
       themeTitle: string;
       themeDescription: string;
@@ -351,6 +371,13 @@ export interface Translations {
     tools: {
       title: string;
       description: string;
+      mcpLabels: Record<
+        string,
+        {
+          name: string;
+          description: string;
+        }
+      >;
     };
     skills: {
       title: string;

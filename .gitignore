@@ -60,3 +60,9 @@ config.yaml.bak
 /frontend/playwright-report/
 .gstack/
 .worktrees
+
+# External dependencies (excluded by user request)
+backend/external/
+
+# Backup files (excluded by user request)
+*.bak

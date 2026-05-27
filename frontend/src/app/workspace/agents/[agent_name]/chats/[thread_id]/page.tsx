@@ -1,11 +1,12 @@
 "use client";
 
-import { BotIcon, PlusSquare } from "lucide-react";
+import { PlusSquare } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
+import { AgentStatusBar } from "@/components/workspace/agent-status-bar";
 import { AgentWelcome } from "@/components/workspace/agent-welcome";
 import { ArtifactTrigger } from "@/components/workspace/artifacts";
 import { ChatBox, useThreadChat } from "@/components/workspace/chats";
@@ -113,13 +114,7 @@ export default function AgentChatPage() {
                 : "bg-background/80 shadow-xs backdrop-blur",
             )}
           >
-            {/* Agent badge */}
-            <div className="flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1">
-              <BotIcon className="text-primary h-3.5 w-3.5" />
-              <span className="text-xs font-medium">
-                {agent?.name ?? agent_name}
-              </span>
-            </div>
+            <AgentStatusBar currentAgentName={agent?.name ?? agent_name} />
 
             <div className="flex w-full items-center text-sm font-medium">
               <ThreadTitle threadId={threadId} thread={thread} />

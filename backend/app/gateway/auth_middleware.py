@@ -113,6 +113,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
             except HTTPException as exc:
                 return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
+        # Reject disabled accounts at the outermost gate so every
+        # downstream route (including /api/v1/auth/me) is protected.
+        if not user.is_active:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": AuthErrorResponse(
+                        code=AuthErrorCode.FORBIDDEN,
+                        message="Account disabled",
+                    ).model_dump()
+                },
+            )
+
         # Stamp both request.state.user (for the contextvar pattern)
         # and request.state.auth (so @require_permission's "auth is
         # None" branch short-circuits instead of running the entire

@@ -12,6 +12,7 @@ from app.gateway.config import get_gateway_config
 from app.gateway.csrf_middleware import CSRFMiddleware
 from app.gateway.deps import langgraph_runtime
 from app.gateway.routers import (
+    admin as admin_router,
     agents,
     artifacts,
     assistants_compat,
@@ -364,8 +365,13 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
     # Auth API is mounted at /api/v1/auth
     app.include_router(auth.router)
 
+    # Admin API is mounted at /api/admin
+    app.include_router(admin_router.router)
+
     # Feedback API is mounted at /api/threads/{thread_id}/runs/{run_id}/feedback
     app.include_router(feedback.router)
+
+
 
     # Thread Runs API (LangGraph Platform-compatible runs lifecycle)
     app.include_router(thread_runs.router)

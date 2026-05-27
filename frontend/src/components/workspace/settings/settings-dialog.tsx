@@ -8,9 +8,11 @@ import {
   SparklesIcon,
   UserIcon,
   WrenchIcon,
+  XIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -146,6 +148,12 @@ export function SettingsDialog(props: SettingsDialogProps) {
               {activeSection === "about" && <AboutSettingsPage />}
             </div>
           </ScrollArea>
+        </div>
+        <div className="flex justify-end border-t pt-4">
+          <Button variant="outline" size="sm" onClick={() => props.onOpenChange?.(false)}>
+            <XIcon className="mr-1 h-4 w-4" />
+            关闭
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

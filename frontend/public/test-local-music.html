@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>本地音乐播放测试</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    .test-item { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+    .test-item h3 { margin-top: 0; }
+    audio { width: 100%; margin-top: 10px; }
+    .status { font-weight: bold; }
+    .ok { color: green; }
+    .err { color: red; }
+    .info { color: #666; font-size: 12px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>本地音乐播放测试</h1>
+  <p>如果下面的音频控件能正常加载并播放，说明前端可以正常播放本地音乐。</p>
+
+  <div class="test-item">
+    <h3>测试 1：周杰伦 - 蜗牛 (.m4a / AAC)</h3>
+    <p class="info">URL: /api/music-station/media/local/jay/2001%20Jay%20Fantasy%20-%20EP/01%20%E8%9C%97%E7%89%9B.m4a</p>
+    <audio controls preload="metadata"
+      src="/api/music-station/media/local/jay/2001%20Jay%20Fantasy%20-%20EP/01%20%E8%9C%97%E7%89%9B.m4a"
+      onloadeddata="document.getElementById('status1').textContent='✅ 加载成功'; document.getElementById('status1').className='status ok'"
+      onerror="document.getElementById('status1').textContent='❌ 加载失败'; document.getElementById('status1').className='status err'">
+    </audio>
+    <p id="status1" class="status">⏳ 等待加载...</p>
+  </div>
+
+  <div class="test-item">
+    <h3>测试 2：周杰伦 - 可爱女人 (.m4a / AAC)</h3>
+    <p class="info">URL: /api/music-station/media/local/jay/%E5%91%A8%E6%9D%B0%E4%BC%A6%20-%20Jay/01%20%E5%8F%AF%E7%88%B1%E5%A5%B3%E4%BA%BA.m4a</p>
+    <audio controls preload="metadata"
+      src="/api/music-station/media/local/jay/%E5%91%A8%E6%9D%B0%E4%BC%A6%20-%20Jay/01%20%E5%8F%AF%E7%88%B1%E5%A5%B3%E4%BA%BA.m4a"
+      onloadeddata="document.getElementById('status2').textContent='✅ 加载成功'; document.getElementById('status2').className='status ok'"
+      onerror="document.getElementById('status2').textContent='❌ 加载失败'; document.getElementById('status2').className='status err'">
+    </audio>
+    <p id="status2" class="status">⏳ 等待加载...</p>
+  </div>
+
+  <div class="test-item">
+    <h3>测试 3：Taylor Swift - State Of Grace (.flac)</h3>
+    <p class="info">URL: /api/music-station/media/local/taylor/Taylor.Swift.-.%5BRed.%28Deluxe.Edition%29%5D.%E4%B8%93%E8%BE%91.%28FLAC%29/Taylor%20Swift%20-%20Red%20%28Exclusive%20Deluxe%20Edition%29%20%282012%29%20%5BFLAC%5D/CD1/01%20State%20Of%20Grace.flac</p>
+    <audio controls preload="metadata"
+      src="/api/music-station/media/local/taylor/Taylor.Swift.-.%5BRed.%28Deluxe.Edition%29%5D.%E4%B8%93%E8%BE%91.%28FLAC%29/Taylor%20Swift%20-%20Red%20%28Exclusive%20Deluxe%20Edition%29%20%282012%29%20%5BFLAC%5D/CD1/01%20State%20Of%20Grace.flac"
+      onloadeddata="document.getElementById('status3').textContent='✅ 加载成功'; document.getElementById('status3').className='status ok'"
+      onerror="document.getElementById('status3').textContent='❌ 加载失败 (浏览器可能不支持 FLAC)'; document.getElementById('status3').className='status err'">
+    </audio>
+    <p id="status3" class="status">⏳ 等待加载...</p>
+  </div>
+
+  <div class="test-item">
+    <h3>测试 4：Taylor Swift - Red (.flac, 含文件名日期后缀)</h3>
+    <p class="info">URL: /api/music-station/media/local/taylor/Taylor.Swift.-.%5BRed.%28Deluxe.Edition%29%5D.%E4%B8%93%E8%BE%91.%28FLAC%29/Taylor%20Swift%20-%20Red%20%28Exclusive%20Deluxe%20Edition%29%20%282012%29%20%5BFLAC%5D/CD1/02%20Red_20190824_190501.flac</p>
+    <audio controls preload="metadata"
+      src="/api/music-station/media/local/taylor/Taylor.Swift.-.%5BRed.%28Deluxe.Edition%29%5D.%E4%B8%93%E8%BE%91.%28FLAC%29/Taylor%20Swift%20-%20Red%20%28Exclusive%20Deluxe%20Edition%29%20%282012%29%20%5BFLAC%5D/CD1/02%20Red_20190824_190501.flac"
+      onloadeddata="document.getElementById('status4').textContent='✅ 加载成功'; document.getElementById('status4').className='status ok'"
+      onerror="document.getElementById('status4').textContent='❌ 加载失败 (浏览器可能不支持 FLAC)'; document.getElementById('status4').className='status err'">
+    </audio>
+    <p id="status4" class="status">⏳ 等待加载...</p>
+  </div>
+
+  <p style="margin-top: 30px; color: #888; font-size: 13px;">
+    提示：FLAC 格式需要 Chrome/Edge/Firefox 等现代浏览器支持。Safari 14+ 也支持，但旧版可能不支持。
+  </p>
+</body>
+</html>
